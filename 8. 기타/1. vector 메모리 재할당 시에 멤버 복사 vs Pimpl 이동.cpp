@@ -11,15 +11,14 @@ using namespace std::chrono;
 
 /*
  * vector 메모리 재할당 시에 멤버 복사 vs Pimpl 이동
- * 
+ *
  * 가장 나쁜 방법: 데이터 멤버를 복사
  *
- * 가장 좋은 방법: 이동 생성을 활용
+ * 가장 좋은 방법: noexcept 이동 생성자를 활용
  *
  * 생각해 볼 수 있는 방법: Pimpl 을 이용한 포인터만 이동
- *
- * 모든 원소가 unique_ptr 을 통해 각각 매번 동적 할당되므로
- * 삽입/삭제 속도가 느려지고, 메모리 파편화가 매우 심해질 수 있다.
+ * - 모든 원소가 unique_ptr 을 통해 각각 매번 동적 할당되므로
+ * - 삽입/삭제 속도가 느려지고, 메모리 파편화가 심해질 수 있다.
  */
 
  /*
@@ -51,6 +50,15 @@ public:
         //cout << "WidgetImpl::복사 생성자 " << i << endl;
     }
 
+    /* push_back 때는 이동 생성이 되더라도,
+     * 
+     * noexcept 이 아니기 때문에 메모리 재할당 시에는 복사 생성이 사용된다. */
+    WidgetImpl(WidgetImpl&& rhs)
+        : i(move(rhs.i)), b(move(rhs.b)), c(move(rhs.c)), d(move(rhs.d)), name(move(rhs.name))
+    {
+        //cout << "WidgetImpl::이동 생성자 " << i << endl;
+    }
+
     WidgetImpl& operator= (const WidgetImpl& rhs)
     {
         i = rhs.i;
@@ -76,6 +84,8 @@ public:
 
     }
 
+    /* vector 는 메모리 재할당 시에
+     * 이동 생성자가 noexcept 인 경우에만 복사 대신 이동을 한다. */
     Widget(Widget&& rhs) : pimpl(move(rhs.pimpl))
     {
         //cout << "Widget::이동 생성자 " << pimpl->i << endl;
@@ -98,21 +108,21 @@ int main(int argc, char* argv[])
     vector<Widget> vpimpl;
 
     vw.push_back(WidgetImpl(1));
-    //cout << "size: " << v1.size() << ", capacity: " << v1.capacity() << endl << endl;
+    //cout << "size: " << vw.size() << ", capacity: " << vw.capacity() << endl << endl;
     vw.push_back(WidgetImpl(2));
-    //cout << "size: " << v1.size() << ", capacity: " << v1.capacity() << endl << endl;
+    //cout << "size: " << vw.size() << ", capacity: " << vw.capacity() << endl << endl;
     vw.push_back(WidgetImpl(3));
-    //cout << "size: " << v1.size() << ", capacity: " << v1.capacity() << endl << endl;
+    //cout << "size: " << vw.size() << ", capacity: " << vw.capacity() << endl << endl;
 
     vw[0] = vw[1];
     //cout << endl;
 
     vpimpl.push_back(Widget(1));
-    //cout << "size: " << v2.size() << ", capacity: " << v2.capacity() << endl << endl;
+    //cout << "size: " << vpimpl.size() << ", capacity: " << vpimpl.capacity() << endl << endl;
     vpimpl.push_back(Widget(2));
-    //cout << "size: " << v2.size() << ", capacity: " << v2.capacity() << endl << endl;
+    //cout << "size: " << vpimpl.size() << ", capacity: " << vpimpl.capacity() << endl << endl;
     vpimpl.push_back(Widget(3));
-    //cout << "size: " << v2.size() << ", capacity: " << v2.capacity() << endl << endl;
+    //cout << "size: " << vpimpl.size() << ", capacity: " << vpimpl.capacity() << endl << endl;
 
     vpimpl[0] = vpimpl[1];
     //cout << endl;
